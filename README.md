@@ -141,6 +141,6 @@ Actual hands-on development time: **[6 hrs]**
 
 ## Project Links
 
-- GitHub Repository: [[Add repository URL](https://github.com/Paridhisharmagithub/RecallKit)]
-- Live Demo: [[Add deployed application URL](https://recallkit-ii76.onrender.com/)]
+- GitHub Repository: [[Repository URL](https://github.com/Paridhisharmagithub/RecallKit)]
+- Live Demo: [[Deployed application URL](https://recallkit-ii76.onrender.com/)]
 
