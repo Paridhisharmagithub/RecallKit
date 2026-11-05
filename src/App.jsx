@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ArrowLeft, BookOpen, CheckCircle2, FileText, Layers, Plus, Sparkles } from 'lucide-react';
+import { useLayoutEffect, useState } from 'react';
+import { ArrowLeft, BookOpen, CheckCircle2, FileText, Layers, Moon, Plus, Sparkles, Sun } from 'lucide-react';
 import Brand from './components/Brand.jsx';
 import BottomNav from './components/BottomNav.jsx';
 import NotesForm from './components/NotesForm.jsx';
@@ -9,7 +9,30 @@ import ConceptChecklist from './components/ConceptChecklist.jsx';
 import Progress from './components/Progress.jsx';
 import { useStudySet } from './hooks/useStudySet.js';
 
+function getInitialTheme() {
+  try {
+    const savedTheme = window.localStorage.getItem('recallkit-theme');
+    if (savedTheme === 'light' || savedTheme === 'dark') return savedTheme;
+  } catch {
+    // Storage can be unavailable in private browsing or restricted environments.
+  }
+
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
 export default function App() {
+  const [theme, setTheme] = useState(getInitialTheme);
+
+  useLayoutEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+
+    try {
+      window.localStorage.setItem('recallkit-theme', theme);
+    } catch {
+      // The theme still works for this session when storage is unavailable.
+    }
+  }, [theme]);
   const [notes, setNotes] = useState('');
   const [activeView, setActiveView] = useState('home');
   const [activeTab, setActiveTab] = useState('flashcards');
@@ -62,6 +85,17 @@ export default function App() {
               </button>
             )}
             <span className="topbar-tag"><Sparkles size={13} /> LEARN BY DOING</span>
+            <button
+              className="theme-toggle"
+              type="button"
+              onClick={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')}
+              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              aria-pressed={theme === 'dark'}
+              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            >
+              {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+              <span className="theme-toggle-label">{theme === 'dark' ? 'Light' : 'Dark'}</span>
+            </button>
           </div>
         </div>
       </header>
