@@ -1,162 +1,146 @@
-# RecallKit — AI Study Assistant (Groq edition)
+# RecallKit — AI-Powered Study Assistant
 
-RecallKit turns free-form study notes into an interactive learning workspace with flashcards, a multiple-choice quiz, and a key-concept checklist. This is a single-provider Groq setup using one server-side API key and one configured model.
+RecallKit is a mobile-first AI-powered study assistant that transforms free-form study notes into interactive learning materials. Users can generate flashcards, take quizzes, review key concepts, and track their learning progress.
 
 ## Features
 
-- Free-form notes input (up to 10,000 characters)
-- Groq API integration through a Node/Express backend
-- Strict JSON Schema output with `openai/gpt-oss-20b`
-- Zod validation on the server and again in the browser
-- Flashcards: flip, previous/next, shuffle, mark known or review again
-- Multiple-choice quiz with submitted-answer feedback and explanations
-- Retest only incorrectly answered questions
-- Expandable key concepts with mastered/unmastered tracking
-- Progress calculated from actual interactions in the current session
-- Loading, empty, error, timeout, rate-limit and invalid-output states
-- Request cancellation and request-ID protection against stale responses
-- Responsive mobile-first interface
+- **AI-powered study generation:** Convert notes or a topic into a structured study set.
+- **Interactive flashcards:** Flip cards, navigate, shuffle, and mark cards as known or needing revision.
+- **Knowledge checks:** Answer multiple-choice questions and receive explanations.
+- **Smart revision:** Retest questions answered incorrectly.
+- **Key concepts:** Explore important concepts and track mastered topics.
+- **Learning progress:** View flashcard activity, quiz accuracy, and concept mastery.
+- **Responsive interface:** Mobile-first design with light and dark themes.
+- **Reliable AI handling:** Validate structured responses and handle malformed, incomplete, empty, slow, or failed requests.
 
-## Technology stack
+## Tech Stack
 
-- React 19 + Vite 6.4
-- JavaScript (ES modules)
-- Custom responsive CSS
-- Node.js + Express 5
-- Groq Chat Completions API using Node's built-in `fetch`
-- Model: `openai/gpt-oss-20b`
-- Strict JSON Schema structured output
-- Zod 4 for runtime validation
-- Lucide React icons
+**Frontend**
+- React 19
+- JavaScript (ES Modules)
+- Vite 6
+- CSS
+- Lucide React
 
-## Requirements
+**Backend**
+- Node.js
+- Express.js
 
-- Node.js **20.18.0 or newer** (the project is configured for the user's existing Node 20.18.0 setup)
+**AI and Validation**
+- Groq API
+- GPT-OSS 20B (`openai/gpt-oss-20b`)
+- Strict JSON Schema
+- Zod
+
+## Architecture
+
+1. Users enter study notes or a recognizable academic topic.
+2. React sends the input to the Express backend through `POST /api/generate`.
+3. The backend sends the prompt and JSON Schema to Groq.
+4. The model returns structured JSON.
+5. The backend parses and validates the response using Zod.
+6. Validated data is returned to the frontend, where React renders interactive learning components.
+
+The Groq API key is stored server-side in an environment variable and is never exposed to the browser.
+
+## Getting Started
+
+### Prerequisites
+- Node.js 20.18.0 or newer
 - npm
-- A Groq API key from https://console.groq.com/keys
+- A Groq API key
 
-No Node.js upgrade is required for the pinned Vite 6 toolchain.
+### Installation
 
-## Run locally (Windows PowerShell)
+Clone the repository:
 
-1. Extract the ZIP and open PowerShell in the extracted `RecallKit-Groq` folder (the folder containing `package.json`).
-2. Install dependencies:
-
-   ```powershell
-   npm install
-   ```
-
-3. Create the local environment file:
-
-   ```powershell
-   Copy-Item .env.example .env
-   notepad .env
-   ```
-
-4. Add your Groq key to `.env`:
-
-   ```env
-   GROQ_API_KEY=gsk_your_actual_key_here
-   GROQ_MODEL=openai/gpt-oss-20b
-   PORT=3001
-   AI_TIMEOUT_MS=90000
-   ```
-
-5. Start the frontend and backend together:
-
-   ```powershell
-   npm start
-   ```
-
-6. Open http://localhost:5173.
-
-The Vite server proxies `/api` requests to Express on port 3001. The backend health endpoint is http://localhost:3001/api/health. It reports the configured provider and model, but never returns the API key.
-
-## Test Groq before using the UI
-
-After adding `GROQ_API_KEY` to `.env`, run:
-
-```powershell
-node test-groq.js
+```bash
+git clone YOUR_GITHUB_REPOSITORY_URL
+cd RecallKit
 ```
 
-This makes a real Groq structured-output request with sample React notes. It parses the response and validates it with the same Zod schema used by the application. The script prints only a summary of the generated study set.
+Install dependencies:
 
-## Checks and production build
+```bash
+npm install
+```
 
-```powershell
+### Environment Configuration
+
+Create a `.env` file in the project root using `.env.example`:
+
+```env
+GROQ_API_KEY=your_groq_api_key
+GROQ_MODEL=openai/gpt-oss-20b
+PORT=3001
+AI_TIMEOUT_MS=90000
+```
+
+### Run Locally
+
+```bash
+npm start
+```
+
+Open:
+
+`http://localhost:5173`
+
+The frontend runs through Vite and communicates with the Express backend on port 3001.
+
+## Testing
+
+Test the Groq integration:
+
+```bash
+npm run test:groq
+```
+
+Run application checks:
+
+```bash
 npm run check
 npm test
 npm run build
 ```
 
-For a single-service deployment:
+## Error Handling and Reliability
 
-- Build command: `npm install && npm run build`
-- Start command: `npm run start:prod`
-- Required environment variable: `GROQ_API_KEY`
-- Optional variables: `GROQ_MODEL`, `PORT`, `AI_TIMEOUT_MS`
+RecallKit includes:
 
-Never place the Groq key in frontend code or a `VITE_` variable.
+- Empty-input and unsuitable-input validation.
+- JSON parsing with malformed-response handling.
+- Zod schema validation for unexpected structures and missing fields.
+- Handling for empty and incomplete model responses.
+- Timeout handling using AbortController.
+- Provider error handling for authentication failures, rate limits, unavailable services, and network errors.
+- Request cancellation and request-ID tracking to prevent stale responses from overwriting newer results.
+- User-friendly loading, error, and retry states.
 
-## How the AI integration works
+## AI Usage Note
 
-1. React posts `{ "notes": "..." }` to `POST /api/generate`.
-2. Express validates the incoming text and its 10,000-character limit.
-3. The backend sends the prompt and strict JSON Schema to Groq's OpenAI-compatible Chat Completions endpoint.
-4. The response is parsed as JSON and validated using `StudySetSchema`.
-5. Only validated study-set data is returned to React.
-6. React validates the payload again before rendering the interactive workspace.
+ChatGPT was used during development to assist with project planning, initial code scaffolding, UI and component implementation, backend integration, validation logic, troubleshooting, and documentation.
 
-The API key is read only on the server from `process.env.GROQ_API_KEY`. Node's built-in `fetch` is used, so no Groq SDK is required.
+I reviewed and adapted the generated suggestions, tested the application locally, and used the assistance to understand and improve the implementation.
 
-## Error handling
+At runtime, RecallKit uses Groq's GPT-OSS 20B model to generate structured educational content.
 
-- Empty or oversized input is rejected before calling the model.
-- Empty model output, malformed JSON and invalid data shapes return controlled errors.
-- Invalid API keys, model-not-found errors, rate limits, provider outages and timeouts receive readable messages.
-- The frontend aborts an earlier fetch when a newer generation starts.
-- A request ID ensures an older response cannot overwrite a newer result.
-- Flashcards and concept state reset when a new study set is generated.
+## Known Limitations
 
-## AI usage note
+- AI-generated educational content may contain factual inaccuracies and should be verified against reliable study material.
+- Output quality depends on the clarity of the supplied topic or notes.
+- Input is limited to 10,000 characters.
+- Study sets and learning progress are maintained during the current session and are not persisted after a full reload.
+- The application does not currently include authentication, database storage, file uploads, or cross-device synchronization.
+- AI generation depends on Groq service availability and account usage limits.
+- Streaming generation and follow-up refinement are not currently implemented.
 
-Update this note before submitting so it accurately reflects your work. Suggested wording, only if true:
+## Time Spent
 
-> I used ChatGPT to help plan the project structure, identify failure cases, and review implementation approaches. I inspected and adapted the suggestions, tested the application, and can explain the code and design decisions. Groq is used at runtime to generate study content.
+Actual hands-on development time: **[6 hrs]**
 
-## Known limitations
+## Project Links
 
-- Model-generated educational content can contain factual inaccuracies; verify important information against course material.
-- Output quality depends on the clarity and completeness of supplied notes.
-- Notes are limited to 10,000 characters.
-- Progress is held in React state for the current session and is not synchronized across devices or persisted after a full reload.
-- No authentication, database, file uploads, or multi-user history.
-- Groq availability, account limits, and model catalogue may change. Strict JSON Schema is enabled for `openai/gpt-oss-20b`; use a model currently listed by Groq as supporting strict structured outputs if changing `GROQ_MODEL`.
+- GitHub Repository: [[Add repository URL](https://github.com/Paridhisharmagithub/RecallKit)]
+- Live Demo: [[Add deployed application URL](https://recallkit-ii76.onrender.com/)]
 
-## Time spent
-
-Record your actual development time before submitting: **[fill in actual hours]**.
-
-## Submission checklist
-
-- [ ] Add a real Groq key to local `.env` (never commit it).
-- [ ] Run `npm install` and `npm start` from a clean extraction.
-- [ ] Run `node test-groq.js` and confirm structured generation succeeds.
-- [ ] Test with your own study notes.
-- [ ] Test empty input, API failure, and retry behaviour.
-- [ ] Test flashcard flip, navigation, shuffle, and review status.
-- [ ] Complete a quiz and retest wrong answers.
-- [ ] Expand concepts and mark them mastered.
-- [ ] Generate a second study set and confirm old card/concept state is cleared.
-- [ ] Test mobile widths and a physical phone if possible.
-- [ ] Run `npm run check`, `npm test`, and `npm run build`.
-- [ ] Update the AI usage note and actual time spent.
-- [ ] Deploy, record the requested demo, and add links to your submission.
-- [ ] Push meaningful commits and verify repository access for Flam.
-
-## Provider documentation
-
-- Groq structured outputs: https://console.groq.com/docs/structured-outputs
-- Groq GPT-OSS 20B model: https://console.groq.com/docs/model/openai/gpt-oss-20b
-- Groq API keys: https://console.groq.com/keys
