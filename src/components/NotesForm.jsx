@@ -1,21 +1,137 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ArrowRight, BookOpen, FileText, Sparkles } from 'lucide-react';
+import { getStudyInputError } from '../../shared/inputValidation.js';
 
 const MAX_CHARS = 10000;
+
 const samples = [
-  { label: 'React Hooks', value: 'React Hooks let function components use state and other React features. useState adds local state. useEffect synchronizes a component with external systems and can return a cleanup function. useRef stores a mutable value that does not trigger a re-render. Hooks must be called at the top level of React components or custom hooks.' },
-  { label: 'Operating Systems', value: 'A process is a program in execution with its own address space and resources. A thread is a unit of execution within a process; threads in the same process share memory. Context switching saves the state of one process or thread and restores another. CPU scheduling decides which ready process or thread gets CPU time. Deadlock occurs when processes wait indefinitely for resources held by one another.' },
-  { label: 'DBMS', value: 'A database management system stores, retrieves and manages data. A primary key uniquely identifies each row. A foreign key references a key in another table. Normalization organizes tables to reduce redundancy and update anomalies. First Normal Form requires atomic values and no repeating groups. Second Normal Form requires 1NF and no partial dependency on a candidate key.' },
+  {
+    label: 'React Hooks',
+    value: 'React Hooks let function components use state and other React features. useState adds local state. useEffect synchronizes a component with external systems and can return a cleanup function. useRef stores a mutable value that does not trigger a re-render. Hooks must be called at the top level of React components or custom hooks.',
+  },
+  {
+    label: 'Operating Systems',
+    value: 'A process is a program in execution with its own address space and resources. A thread is a unit of execution within a process; threads in the same process share memory. Context switching saves the state of one process or thread and restores another. CPU scheduling decides which ready process or thread gets CPU time. Deadlock occurs when processes wait indefinitely for resources held by one another.',
+  },
+  {
+    label: 'DBMS',
+    value: 'A database management system stores, retrieves and manages data. A primary key uniquely identifies each row. A foreign key references a key in another table. Normalization organizes tables to reduce redundancy and update anomalies. First Normal Form requires atomic values and no repeating groups. Second Normal Form requires 1NF and no partial dependency on a candidate key.',
+  },
 ];
+
+function getErrorPresentation(message) {
+  const normalized = String(message || '').toLowerCase();
+
+  if (
+    normalized.includes('not enough study material') ||
+    normalized.includes('could not find enough study material') ||
+    normalized.includes('greeting rather than study material') ||
+    normalized.includes('doesn’t look like study material') ||
+    normalized.includes("doesn't look like study material")
+  ) {
+    return {
+      title: "Let's find something to learn!",
+      message:
+        'This input does not contain enough study material yet. Enter a subject, such as React hooks or DBMS, or paste a few notes.',
+      action: 'Edit your input',
+      actionType: 'edit',
+    };
+  }
+
+  if (
+    normalized.includes('incomplete study set') ||
+    normalized.includes('unexpected structure') ||
+    normalized.includes('not valid json') ||
+    normalized.includes('invalid json')
+  ) {
+    return {
+      title: "We couldn't create a complete study set.",
+      message:
+        'The AI response was missing some required study items. You can try again or add a little more detail to your notes.',
+      action: 'Try again',
+      actionType: 'retry',
+    };
+  }
+
+  if (
+    normalized.includes('temporarily unavailable') ||
+    normalized.includes('rate limit') ||
+    normalized.includes('quota') ||
+    normalized.includes('429') ||
+    normalized.includes('503')
+  ) {
+    return {
+      title: 'The AI service is temporarily unavailable.',
+      message:
+        'Your notes are still here. Please wait a moment and try generating the study set again.',
+      action: 'Try again',
+      actionType: 'retry',
+    };
+  }
+
+  if (
+    normalized.includes('could not reach') ||
+    normalized.includes('connection') ||
+    normalized.includes('network')
+  ) {
+    return {
+      title: "Couldn't connect to the AI service.",
+      message:
+        'Check your internet connection and make sure RecallKit is still running, then try again.',
+      action: 'Try again',
+      actionType: 'retry',
+    };
+  }
+
+  return {
+    title: "We couldn't create your study set.",
+    message: message || 'Something went wrong. Please try again.',
+    action: 'Try again',
+    actionType: 'retry',
+  };
+}
 
 export default function NotesForm({ notes, setNotes, status, error, onGenerate, onRetry }) {
   const [showLimitHint, setShowLimitHint] = useState(false);
+  const [inputError, setInputError] = useState('');
+  const [hideServerError, setHideServerError] = useState(false);
+  const textareaRef = useRef(null);
   const loading = status === 'loading';
+  const visibleServerError = error && !hideServerError ? getErrorPresentation(error) : null;
+
+  function focusInput() {
+    textareaRef.current?.focus();
+    const cursorPosition = textareaRef.current?.value.length ?? 0;
+    textareaRef.current?.setSelectionRange(cursorPosition, cursorPosition);
+  }
 
   function handleSubmit(event) {
     event.preventDefault();
-    if (!notes.trim() || loading) return;
+    if (loading) return;
+
+    const validationMessage = getStudyInputError(notes);
+    if (validationMessage) {
+      setInputError(validationMessage);
+      setHideServerError(true);
+      focusInput();
+      return;
+    }
+
+    setInputError('');
+    setHideServerError(false);
     onGenerate(notes.trim());
+  }
+
+  function handleNotesChange(value) {
+    setNotes(value);
+    if (inputError) setInputError('');
+    if (error) setHideServerError(true);
+  }
+
+  function handleSampleSelect(value) {
+    setNotes(value);
+    setInputError('');
+    setHideServerError(true);
   }
 
   return (
@@ -58,14 +174,17 @@ export default function NotesForm({ notes, setNotes, status, error, onGenerate, 
 
         <label className="sr-only" htmlFor="study-notes">Study material</label>
         <textarea
+          ref={textareaRef}
           id="study-notes"
           value={notes}
           maxLength={MAX_CHARS}
-          onChange={(event) => setNotes(event.target.value)}
+          onChange={(event) => handleNotesChange(event.target.value)}
           onFocus={() => setShowLimitHint(true)}
           placeholder="Paste your class notes, textbook content, or type a topic you want to understand..."
           rows={6}
           disabled={loading}
+          aria-invalid={Boolean(inputError)}
+          aria-describedby={inputError ? 'study-input-error' : undefined}
         />
         <div className="textarea-meta">
           <span>{showLimitHint ? 'Your notes stay in this session.' : 'Use notes or describe a topic.'}</span>
@@ -81,7 +200,7 @@ export default function NotesForm({ notes, setNotes, status, error, onGenerate, 
                 className="sample-chip"
                 key={sample.label}
                 disabled={loading}
-                onClick={() => setNotes(sample.value)}
+                onClick={() => handleSampleSelect(sample.value)}
               >
                 {sample.label}<ArrowRight size={12} />
               </button>
@@ -89,10 +208,36 @@ export default function NotesForm({ notes, setNotes, status, error, onGenerate, 
           </div>
         </div>
 
-        {error && (
-          <div className="error-panel" role="alert">
-            <div className="error-copy"><strong>We couldn't create your study set.</strong><span>{error}</span></div>
-            <button className="text-button" type="button" onClick={onRetry} disabled={loading || !notes.trim()}>Try again</button>
+        {inputError && (
+          <div className="error-panel" role="alert" aria-live="polite">
+            <div className="error-copy">
+              <strong>Let's find something to learn!</strong>
+              <span id="study-input-error">
+                {inputError.toLowerCase().includes('greeting')
+                  ? 'This does not look like study material yet. Enter a subject or paste your notes—for example, “React hooks”, “DBMS normalization”, or “Operating system scheduling”.'
+                  : inputError}
+              </span>
+            </div>
+            <button className="text-button" type="button" onClick={focusInput}>
+              Edit input
+            </button>
+          </div>
+        )}
+
+        {visibleServerError && (
+          <div className="error-panel" role="alert" aria-live="polite">
+            <div className="error-copy">
+              <strong>{visibleServerError.title}</strong>
+              <span>{visibleServerError.message}</span>
+            </div>
+            <button
+              className="text-button"
+              type="button"
+              onClick={visibleServerError.actionType === 'edit' ? focusInput : onRetry}
+              disabled={loading || (visibleServerError.actionType === 'retry' && !notes.trim())}
+            >
+              {visibleServerError.action}
+            </button>
           </div>
         )}
 
