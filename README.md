@@ -144,3 +144,4 @@ Actual hands-on development time: **[6 hrs]**
 - GitHub Repository: [[Repository URL](https://github.com/Paridhisharmagithub/RecallKit)]
 - Live Demo: [[Deployed application URL](https://recallkit-ii76.onrender.com/)]
 
+> **Note:** I'm using Render's free plan, so the app might take a few seconds to load the first time. Please wait a bit if it doesn't open immediately!
